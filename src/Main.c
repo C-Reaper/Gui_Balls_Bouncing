@@ -13,22 +13,26 @@
 TransformedView tv;
 
 Vec2 outer_p;
-float outer_r;
+Vec2 outer_r;
 
 Vec2 ball_p;
-float ball_r;
+Vec2 ball_r;
 Vec2 ball_v;
 Vec2 ball_a;
 
 void Setup(AlxWindow* w){
-	tv = TransformedView_New((Vec2){ GetWidth(),GetHeight() });
-	TransformedView_Offset(&tv,(Vec2){ 0.0f,0.0f });
+	tv = TransformedView_Make(
+		(Vec2){ GetWidth(),GetHeight() },
+		(Vec2){ 0.0f,0.0f },
+		(Vec2){ 1.0f,1.0f },
+		(float)GetWidth() / (float)GetHeight()
+	);
 
 	outer_p = (Vec2){ 0.0f,0.0f };
-	outer_r = 1.0f;
+	outer_r = (Vec2){ 1.0f,1.0f };;
 
 	ball_p = (Vec2){ 0.0f,0.0f };
-	ball_r = 0.05f;
+	ball_r = (Vec2){ 0.05f,0.05f };
 	ball_v = (Vec2){ 4.0f,0.0f };
 	ball_a = (Vec2){ 0.0f,10.0f };
 
@@ -42,36 +46,41 @@ void Update(AlxWindow* w){
 	ball_p = Vec2_Add(ball_p,Vec2_Mulf(ball_v,w->ElapsedTime));
 
 	const Vec2 d = Vec2_Sub(ball_p,outer_p);
-	const float l = outer_r - ball_r;
 	const float dist = Vec2_Mag(d);
-	if(dist>l){
+
+	const float or = Vec2_Mag(outer_r);
+	const float br = Vec2_Mag(ball_r);
+	const float l = or - br;
+	
+	if(dist > l){
 		ball_v = Vec2_Reflect(Vec2_Perp(d),ball_v);
-		if(ball_r<outer_r) 	ball_r *= 1.05f;
-		else 				ball_r = outer_r;
-		ball_p = Vec2_Add(outer_p,Vec2_Mulf(Vec2_Norm(d),outer_r - ball_r));
+		if(Vec2_Mag(ball_r)<or) 	ball_r = Vec2_Mulf(ball_r,1.05f);
+		else 						ball_r = Vec2_Mulf(Vec2_Norm(ball_r),or);
+
+		ball_p = Vec2_Add(outer_p,Vec2_Mulf(Vec2_Norm(d),or - br));
 	}
 
 	Clear(BLACK);
 
 	
 	Vec2 bg_p = TransformedView_WorldScreenPos(&tv,outer_p);
-	float bg_r = TransformedView_WorldScreenLX(&tv,outer_r);
+	Vec2 bg_r = TransformedView_WorldScreenLength(&tv,outer_r);
 
-	int op_r = (int)(ball_r * 10000.0f) & 255;
-	int op_g = (int)(ball_r * 1000.0f) & 255;
-	int op_b = (int)(ball_r * 100.0f) & 255;
+	int op_r = (int)(br * 10000.0f) & 255;
+	int op_g = (int)(br * 1000.0f) & 255;
+	int op_b = (int)(br * 100.0f) & 255;
 	Pixel op_c = Pixel_RGBA(op_r,op_g,op_b,255);
-	RenderCircle(bg_p,bg_r,op_c);
+	Circle_R_Render(WINDOW_STD_ARGS,bg_p,bg_r,op_c);
 
 
 	Vec2 p = TransformedView_WorldScreenPos(&tv,ball_p);
-	float r = TransformedView_WorldScreenLX(&tv,ball_r);
+	Vec2 r = TransformedView_WorldScreenLength(&tv,ball_r);
 	
-	int p_r = (int)(ball_r * 500000.0f) & 255;
-	int p_g = (int)(ball_r * 50000.0f) & 255;
-	int p_b = (int)(ball_r * 5000.0f) & 255;
+	int p_r = (int)(br * 500000.0f) & 255;
+	int p_g = (int)(br * 50000.0f) & 255;
+	int p_b = (int)(br * 5000.0f) & 255;
 	Pixel p_c = Pixel_RGBA(p_r,p_g,p_b,255);
-	RenderCircle(p,r,p_c);
+	Circle_R_Render(WINDOW_STD_ARGS,p,r,p_c);
 
 
 	String str = String_Format("| Offset: %f,%f - Zoom: %f,%f |",tv.Offset.x,tv.Offset.y,tv.Scale.x,tv.Scale.y);
